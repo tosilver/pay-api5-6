@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="ehcache.xsd"
+         updateCheck="false" name="shiroCache">
+
+    <diskStore path="java.io.tmpdir/data-api/shiro-ehcache"/>
+
+    <!--
+    Default Cache configuration. These settings will be applied to caches
+    created programmatically using CacheManager.add(String cacheName).
+    This element is optional, and using CacheManager.add(String cacheName) when
+    its not present will throw CacheException
+
+    The defaultCache has an implicit name "default" which is a reserved cache name.
+    -->
+    <defaultCache
+            maxElementsInMemory="10000"
+            eternal="false"
+            timeToIdleSeconds="120"
+            timeToLiveSeconds="120"
+            overflowToDisk="false"
+            diskPersistent="false"
+            diskExpiryThreadIntervalSeconds="120"/>
+
+    <cache name="shiro-activeSessionCache"
+           maxElementsInMemory="10000"
+           overflowToDisk="false"
+           eternal="true"
+           timeToLiveSeconds="0"
+           timeToIdleSeconds="0"
+           diskPersistent="true"
+           diskExpiryThreadIntervalSeconds="600"/>
+
+    <cache name="org.apache.shiro.realm.text.PropertiesRealm-0-accounts"
+           maxElementsInMemory="1000"
+           eternal="true"
+           overflowToDisk="false"/>
+
+    <!--     <cacheManagerPeerListenerFactory -->
+    <!-- 	 class="org.terracotta.ehcachedx.monitor.probe.ProbePeerListenerFactory" -->
+    <!-- 	 properties="monitorAddress=localhost, monitorPort=9889, memoryMeasurement=true" /> -->
+</ehcache>

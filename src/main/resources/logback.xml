@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- For assistance related to logback-translator or configuration  -->
+<!-- files in general, please contact the logback user mailing list -->
+<!-- at http://www.qos.ch/mailman/listinfo/logback-user             -->
+<!--                                                                -->
+<!-- For professional support please see                            -->
+<!--    http://www.qos.ch/shop/products/professionalSupport         -->
+<!--                                                                -->
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    <!--<logger name="com.alibaba.dubbo" level="WARN"/>-->
+    <!--<logger name="org.apache.velocity" level="WARN"/>-->
+
+    <!-- show parameters for hibernate sql 专为 Hibernate 定制 -->
+    <!--<logger name="org.hibernate.type.descriptor.sql.BasicBinder"  level="TRACE" />-->
+    <!--<logger name="org.hibernate.type.descriptor.sql.BasicExtractor"  level="DEBUG" />-->
+    <!--<logger name="org.hibernate.SQL" level="DEBUG" />-->
+    <!--<logger name="org.hibernate.engine.QueryParameters" level="DEBUG" />-->
+    <!--<logger name="org.hibernate.engine.query.HQLQueryPlan" level="DEBUG" />-->
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%date [%thread] %level %logger =>> %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 日志输出级别 -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
