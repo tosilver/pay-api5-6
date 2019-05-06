@@ -76,6 +76,11 @@ public class QRCheckOutService extends BasePayService {
                     //得到对应商户id,支付类型,金额,状态为开始的支付二维码集合
                     List<qrcode> qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, totalMOney);
                     logger.info("得到"+qrChannel.getName()+"符合条件的二维码有"+qrcodeList.size()+"个");
+                    if (qrcodeList.size()==0){
+                        logger.info("调用任意额度码");
+                        qrcodeList=qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, new BigDecimal(0));
+                        logger.info("任意额度码有"+qrcodeList.size()+"个");
+                    }
                     for (int j = 0; j < qrcodeList.size(); j++) {
                         Integer qrlunxun = (Integer) session.getAttribute("qrlunxun");
                         if (qrlunxun == null || qrlunxun > qrcodeList.size()-1) {
