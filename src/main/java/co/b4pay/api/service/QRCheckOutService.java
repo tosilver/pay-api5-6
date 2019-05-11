@@ -30,10 +30,10 @@ public class QRCheckOutService extends BasePayService {
     /**
      * 从所属地址拿出符合请求条件的地址
      */
-    public qrcode checkout(List<QRChannel> qrChannelList, BigDecimal totalMOney , int payType, HttpServletRequest request){
+    public qrcode checkout(List<QRChannel> qrChannelList, BigDecimal totalMOney , int payType,Long merchantId, HttpServletRequest request){
         logger.info("校验开始:");
         qrcode qrcode=null;
-        for (int i = 0; i < qrChannelList.size()-1; i++) {
+        for (int i = 0; i < qrChannelList.size(); i++) {
             //轮询开始
             Subject subject = SecurityUtils.getSubject();
             Session session = subject.getSession(true);
@@ -42,7 +42,7 @@ public class QRCheckOutService extends BasePayService {
                 session.setAttribute("qrlunxun",0);
             }
             Integer lunxun = (Integer) session.getAttribute("lunxun");
-            if (lunxun == null || lunxun > qrChannelList.size()-1) {
+            if (lunxun == null || lunxun >= qrChannelList.size()) {
                 lunxun = 0;
             }
             i=lunxun;
@@ -72,14 +72,18 @@ public class QRCheckOutService extends BasePayService {
                     qrChannel.setLastRequestTime(now());
                     qrChannelDao.save(qrChannel);
                     //得到校验成功的二维码通道的商户id
-                    Long merchantId = qrChannel.getMerchantId();
+                    Long qrMerchantId = qrChannel.getMerchantId();
                     //得到对应商户id,支付类型,金额,状态为开始的支付二维码集合
-                    List<qrcode> qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, totalMOney);
+                    List<qrcode> qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, totalMOney);
                     logger.info("得到"+qrChannel.getName()+"符合条件的二维码有"+qrcodeList.size()+"个");
-                    if (qrcodeList.size()==0){
+                    //创富金行的商户ID为
+                    Long cf=100000000000068L;
+                    if (qrcodeList.size()==0 && !cf.equals(merchantId) ){
                         logger.info("调用任意额度码");
-                        qrcodeList=qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, new BigDecimal(0));
+                        qrcodeList=qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, new BigDecimal(0));
                         logger.info("任意额度码有"+qrcodeList.size()+"个");
+                    } else {
+                        throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
                     }
                     for (int j = 0; j < qrcodeList.size(); j++) {
                         Integer qrlunxun = (Integer) session.getAttribute("qrlunxun");

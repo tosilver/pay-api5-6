@@ -5,11 +5,13 @@ import co.b4pay.api.common.enums.ChannelType;
 import co.b4pay.api.common.exception.BizException;
 import co.b4pay.api.common.signature.HmacSHA1Signature;
 import co.b4pay.api.common.signature.SignatureUtil;
+import co.b4pay.api.common.tosdomutils.AESUtil;
 import co.b4pay.api.common.utils.DateUtil;
 import co.b4pay.api.common.utils.HttpsUtils;
 import co.b4pay.api.common.utils.WebUtil;
 import co.b4pay.api.model.*;
 import com.alibaba.fastjson.JSONObject;
+import org.apache.catalina.util.URLEncoder;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -17,9 +19,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.security.SignatureException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +48,7 @@ public class QRPayService extends BasePayService {
      */
     //private static final String MALLPAY_API_DOMAIN = MainConfig.getConfig("MALLPAY_API_DOMAIN");
 
-    private HmacSHA1Signature signature = new HmacSHA1Signature();
+    private static HmacSHA1Signature signature = new HmacSHA1Signature();
 
 
     public JSONObject executeReturn(Long merchantId, Router router, JSONObject params, HttpServletRequest request) throws BizException {
@@ -146,9 +150,24 @@ public class QRPayService extends BasePayService {
         List<QRChannel> qrChannelList = qrChannelDao.findByStatus(1);
         //组装响应参数
         JSONObject jsonObject = new JSONObject();
-        Long qrcodeid=null;
-        qrcode qrcode = null;
-        if ("0".equals(payType)){
+        qrcode qrcode = qrCheckOutService.checkout(qrChannelList, totalMOney, type,merchantId, request);
+        String codeData = qrcode.getCodeData();
+        Long qrcodeid=qrcode.getId();
+        if ("4".equals(payType)){
+            //因为无法跨越shrio登录验证,所以先在这里组装好信息
+            BankCardInformation bankCrad = bankCradDao.findByCardNo(codeData);
+            String customerName = bankCrad.getCustomerName();
+            String bankMark = bankCrad.getBankMark();
+            String bankName = bankCrad.getBankName();
+            String sign = ToCradSign(codeData,customerName,totalMOney.toPlainString(),bankMark,bankName);
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("http://122.114.77.182:8080/qrcode.do").append("?");
+            stringBuilder.append("no=").append(sign);
+            jsonObject.put("qrcode",stringBuilder.toString());
+        }else {
+            jsonObject.put("qrcode", codeData);
+        }
+        /*if ("0".equals(payType)){
             //轮询校验后得到二维码
             qrcode = qrCheckOutService.checkout(qrChannelList, totalMOney, type, request);
             String codeData = qrcode.getCodeData();
@@ -166,14 +185,19 @@ public class QRPayService extends BasePayService {
             String codeData = qrcode.getCodeData();
             qrcodeid=qrcode.getId();
             jsonObject.put("qrcode", codeData);
-        }
+        }else if ("3".equals(payType)){
+            //轮询校验后得到二维码
+            qrcode = qrCheckOutService.checkout(qrChannelList, totalMOney, type, request);
+            String codeData = qrcode.getCodeData();
+            qrcodeid=qrcode.getId();
+            jsonObject.put("qrcode", codeData);
+        }*/
 
         jsonObject.put("out_trade_no", outTradeNo);
         jsonObject.put("msg", "接口调用成功");
         jsonObject.put("code", "10000");
         //根据返回二维码信息中的商户号查询码商通道
         Long qrcodeMerchantId = qrcode.getMerchantId();
-        Long id = qrcode.getId();
         QRChannel qrChannel = qrChannelDao.findByMerchantIdaAndId(qrcodeMerchantId);
         BigDecimal serviceCharge = totalMOney.multiply(merchantRate.getCostRate(), new MathContext(2, RoundingMode.HALF_UP)).divide(new BigDecimal("100"), 2, BigDecimal.ROUND_UP).add(merchantRate.getPayCost());
         //String tradeId = String.format("%s%s", DateUtil.dateToStr(DateUtil.getTime(), DateUtil.YMdhmsS_noSpli), RandomStringUtils.randomNumeric(15));//交易订单号
@@ -210,6 +234,48 @@ public class QRPayService extends BasePayService {
         logger.info("响应参数为:"+jsonObject.toJSONString());
         qrCheckOutService.timer1(outTradeNo);
         return jsonObject;
+    }
+
+    /**
+     * 生成支付到卡的加密数据
+     * @param
+     * @return
+     */
+    public static String ToCradSign(String CardNo,String bankAccount,String money,String bankMark,String bankName) {
+        StringBuilder sb=new StringBuilder();
+        sb.append("CardNo=").append(CardNo);
+        sb.append("&bankAccount=").append(bankAccount);
+        sb.append("&money=").append(money);
+        sb.append("&amount=").append(money);
+        sb.append("&bankMark=").append(bankMark);
+        sb.append("&bankName=").append(bankName);
+        String encrypt = AESUtil.encrypt(sb.toString(), "bzl");
+        logger.warn("加密后的字符串:----"+encrypt);
+        URLEncoder urlEncoder = new URLEncoder();
+        String encode = urlEncoder.encode(encrypt);
+        /*System.out.println("加密:"+encrypt);
+        String decrypt = AESUtil.decrypt(encrypt, "bzl");
+        System.out.println("解密"+decrypt);*/
+        return encode;
+    }
+
+
+    public static void main(String[] args) {
+        StringBuilder sb=new StringBuilder();
+        sb.append("cardNo=").append("6227003105030118573");
+        sb.append("&bankAccount=").append("123");
+        sb.append("&money=").append("100");
+        sb.append("&amount=").append("100");
+        sb.append("&bankMark=").append("CCB");
+        sb.append("&bankName=").append("中国建设银行");
+        String encrypt = AESUtil.encrypt(sb.toString(), "bzl");
+        System.out.println("加密:"+encrypt);
+        String decrypt = AESUtil.decrypt(encrypt, "bzl");
+        System.out.println("解密"+decrypt);
+        URLEncoder urlEncoder = new URLEncoder();
+        String encode = urlEncoder.encode(encrypt);
+        System.out.println(encode);
+
     }
 
 

@@ -64,6 +64,9 @@ public class BasePayService {
     @Autowired
     protected QRCheckOutService qrCheckOutService;
 
+    @Autowired
+    protected BankCradDao bankCradDao;
+
     protected synchronized Channel getChannel(Long merchantId, Router router, BigDecimal totalAmount, String ip4) {
         List<Channel> channelList = channelDao.findByRouterIdAndStatus(router.getId(), 1, ip4);
         if (CollectionUtils.isEmpty(channelList)) {
