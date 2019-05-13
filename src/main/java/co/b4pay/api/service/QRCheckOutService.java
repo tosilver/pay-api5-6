@@ -62,7 +62,7 @@ public class QRCheckOutService extends BasePayService {
                 if (status <= 0) {
                     logger.info("二维码通道:" + qrChannel.getName() + "校验成功!");
                     session.setAttribute("lunxun", lunxun + 1);
-                    //把请求金额从充值资金池减去然后加进冻结资金池
+                   /* //把请求金额从充值资金池减去然后加进冻结资金池
                     BigDecimal subtract = rechargeAmount.subtract(totalMOney);
                     logger.info("充值资金池:----->" + rechargeAmount + "请求金额为:------->" + totalMOney + "相减等于:----->" + subtract);
                     BigDecimal add = frozenCapitalPool.add(totalMOney);
@@ -70,7 +70,7 @@ public class QRCheckOutService extends BasePayService {
                     qrChannel.setRechargeAmount(subtract);
                     qrChannel.setFrozenCapitalPool(add);
                     qrChannel.setLastRequestTime(now());
-                    qrChannelDao.save(qrChannel);
+                    qrChannelDao.save(qrChannel);*/
                     //得到校验成功的二维码通道的商户id
                     Long qrMerchantId = qrChannel.getMerchantId();
                     //得到对应商户id,支付类型,金额,状态为开始的支付二维码集合
@@ -82,8 +82,6 @@ public class QRCheckOutService extends BasePayService {
                         logger.info("调用任意额度码");
                         qrcodeList=qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, new BigDecimal(0));
                         logger.info("任意额度码有"+qrcodeList.size()+"个");
-                    } else {
-                        throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
                     }
                     for (int j = 0; j < qrcodeList.size(); j++) {
                         Integer qrlunxun = (Integer) session.getAttribute("qrlunxun");
@@ -100,11 +98,21 @@ public class QRCheckOutService extends BasePayService {
                                 qrcode.setLastRequestTime(now());
                                 qrcode.setTurnover(totalMOney);
                                 qrCodeDao.save(qrcode);
+                                //把请求金额从充值资金池减去然后加进冻结资金池
+                                BigDecimal subtract = rechargeAmount.subtract(totalMOney);
+                                logger.info("充值资金池:----->" + rechargeAmount + "请求金额为:------->" + totalMOney + "相减等于:----->" + subtract);
+                                BigDecimal add = frozenCapitalPool.add(totalMOney);
+                                logger.info("冻结资金池:----->" + frozenCapitalPool + "请求金额为:------->" + totalMOney + "相加等于:----->" + add);
+                                qrChannel.setRechargeAmount(subtract);
+                                qrChannel.setFrozenCapitalPool(add);
+                                qrChannel.setLastRequestTime(now());
+                                qrChannelDao.save(qrChannel);
                                 session.setAttribute("qrlunxun",qrlunxun+1 );
                                 break;
                             }
                         }else {
                             session.setAttribute("qrlunxun",qrlunxun+1 );
+                            throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
                         }
                     }
                 }else {
