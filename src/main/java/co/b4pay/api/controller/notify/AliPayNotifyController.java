@@ -99,6 +99,7 @@ public class AliPayNotifyController {
         }
         logger.warn("aliPay notify parms ->" + jsonObject.toJSONString());
         String merchantOrderNo = request.getParameter("out_trade_no");
+        String appId = request.getParameter("app_id");
         Trade trade = tradeService.findByMerchantOrderNo(merchantOrderNo);
         if (trade == null) {
             logger.warn(String.format("[%s]订单信息不存在", merchantOrderNo));
@@ -127,6 +128,7 @@ public class AliPayNotifyController {
                     AlipayTradeQueryModel model = new AlipayTradeQueryModel();
                     model.setOutTradeNo(merchantOrderNo);
                     model.setTradeNo(tradeNo);
+                    model.setOrgPid(appId);
                     alipayRequest.setBizModel(model);
                     alipayTradeQueryResponse = aliH5PayService
                             .getAlipayClient(channel)

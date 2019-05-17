@@ -43,8 +43,8 @@ public class MallPayService extends BasePayService {
 
     private static final Logger logger = LoggerFactory.getLogger(MallPayService.class);
     //回调地址
-    //private static final String notifyIp="http://223.26.48.13:9988/notify/mallPayNotify.do"; //BISI
-    private static final String notifyIp="http://122.114.77.138:9988/notify/mallPayNotify.do"; //彗星专属
+    private static final String notifyIp="http://223.26.48.13:9988/notify/mallPayNotify.do"; //BISI
+    //private static final String notifyIp="http://122.114.77.138:9988/notify/mallPayNotify.do"; //彗星专属
 
 
     /**

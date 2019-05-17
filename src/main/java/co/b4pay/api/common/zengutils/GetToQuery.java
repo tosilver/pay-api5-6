@@ -35,7 +35,7 @@ public class GetToQuery {
             sb.append("total_fee=").append(totalFee).append("&");
             sb.append("pay_type=").append(type).append("&");
             sb.append("address=").append(address).append("&");
-            sb.append("ports=").append(3);
+            sb.append("ports=").append(1);
             logger.info("向查询端口发送的参数是:"+sb.toString());
             HttpClient httpClient = new HttpClient(query + sb.toString());
             // 返回数据
@@ -60,7 +60,7 @@ public class GetToQuery {
             sb.append("total_fee=").append(totalFee).append("&");
             sb.append("pay_type=").append(type).append("&");
             sb.append("address=").append(address).append("&");
-            sb.append("ports=").append(4);
+            sb.append("ports=").append(2);
             logger.info("向查询端口发送的参数是:"+sb.toString());
             HttpClient httpClient = new HttpClient(query + sb.toString());
             // 返回数据

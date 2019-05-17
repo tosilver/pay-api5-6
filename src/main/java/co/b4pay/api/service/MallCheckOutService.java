@@ -43,7 +43,7 @@ public class MallCheckOutService extends BasePayService {
             lunxun = 0;
         }
         MallAddress mallAddress=null;
-        for (int i = 0; i < asList.size()-1; i++) {
+        for (int i = 0; i < asList.size(); i++) {
             i=lunxun;
             String addressId = asList.get(i);
             //String addressId = iterator.next();
@@ -60,11 +60,11 @@ public class MallCheckOutService extends BasePayService {
                 BigDecimal frozenCapitalPool = _mallAddress.getFrozenCapitalPool();
                 //防止充值资金池溢出,取资金池的15%的比较(100%-15%)
                 //BigDecimal actualAmount = rechargeAmount.multiply(new BigDecimal(85)).divide(new BigDecimal(100));
-                BigDecimal actualAmount = new BigDecimal(1000.00);
+                BigDecimal actualAmount = new BigDecimal(1000);
 
                 logger.info("资金池----->" + _mallAddress.getMallName() + "限制金额为:" + actualAmount);
-                int status = totalMOney.compareTo(actualAmount);
-                if (status <= 0) {
+                int status = rechargeAmount.compareTo(actualAmount);
+                if (status > 0) {
                     logger.info("地址id:" + addressId + "校验成功!");
                     session.setAttribute("lunxun", lunxun + 1);
                     //把请求金额从充值资金池减去然后加进冻结资金池
@@ -77,7 +77,7 @@ public class MallCheckOutService extends BasePayService {
                     _mallAddress.setLastRequestTime(now());
                     mallAddressDao.save(_mallAddress);
                     mallAddress = _mallAddress;
-                    break;
+                    return mallAddress;
                 }
             }else {
                 session.setAttribute("lunxun",lunxun+1 );
