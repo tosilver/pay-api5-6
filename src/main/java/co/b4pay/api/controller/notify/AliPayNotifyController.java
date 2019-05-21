@@ -186,7 +186,7 @@ public class AliPayNotifyController {
                     //如果是扫码支付，就进行分账
                     //if (router != null && "aliSPay".equalsIgnoreCase(router.getId())) {
                     //----------------分账代码------------------------------
-                    AlipayClient alipayClient = new DefaultAlipayClient("https://openapi.alipay.com/gateway.do",
+                    /*AlipayClient alipayClient = new DefaultAlipayClient("https://openapi.alipay.com/gateway.do",
                             channel.getProdAppid(),
                             channel.getProdPrivateKey(),
                             "json",
@@ -253,7 +253,7 @@ public class AliPayNotifyController {
                     }
                     //---------------------------------------------------
                     //}
-                    break;
+                    break;*/
                 case "TRADE_CLOSED":
                     logger.warn("查询返回该订单支付失败或被关闭!!!");
                     break;

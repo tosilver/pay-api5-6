@@ -20,6 +20,8 @@ import com.alipay.api.domain.AlipayTradeWapPayModel;
 import com.alipay.api.request.AlipayTradeWapPayRequest;
 import com.alipay.api.response.AlipayTradeWapPayResponse;
 import com.alipay.demo.trade.config.Configs;
+import com.alipay.demo.trade.model.builder.AlipayTradePrecreateRequestBuilder;
+import com.alipay.demo.trade.model.result.AlipayF2FPrecreateResult;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
