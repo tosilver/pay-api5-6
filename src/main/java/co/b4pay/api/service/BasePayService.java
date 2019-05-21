@@ -14,7 +14,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import static co.b4pay.api.common.config.MainConfig.CHANCEL_MIN_RATE;
 import static co.b4pay.api.common.utils.DateUtil.now;
 
 public class BasePayService {

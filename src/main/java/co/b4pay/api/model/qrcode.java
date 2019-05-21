@@ -29,6 +29,7 @@ public class qrcode extends BaseEntity {
     private Date  lastRequestTime;           //最后请求时间
     private BigDecimal turnover;            //日收入
     private BigDecimal rate;                     //速率
+    private int no;//二维码记录
 
 
     public Long getMerchantId() {
@@ -117,5 +118,13 @@ public class qrcode extends BaseEntity {
 
     public void setStatus(int status) {
         this.status = status;
+    }
+
+    public int getNo() {
+        return no;
+    }
+
+    public void setNo(int no) {
+        this.no = no;
     }
 }
