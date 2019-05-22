@@ -33,95 +33,97 @@ public class QRCheckOutService extends BasePayService {
     private QRChannel qrChannel;
     private Session session;
     Long merchantId;
-    qrcode qrcode=null;
+    Long cf = 100000000000068L;
     /**
      * 从所属地址拿出符合请求条件的地址
-     */
-    public qrcode checkout(List<QRChannel> qrChannelList, BigDecimal totalMOney , int payType, HttpServletRequest request){
+     */      qrcode qrcode;
+    public qrcode checkout(List<QRChannel> qrChannelList, BigDecimal totalMOney , int payType,Long merId, HttpServletRequest request){
+        merchantId= merId;
         logger.info("校验开始:");
+           for (int i = 0; i < qrChannelList.size() - 1; i++) {
 
-        for (int i = 0; i < qrChannelList.size()-1; i++) {
+               //第一个轮询开始
+               Subject subject = SecurityUtils.getSubject();
+               session = subject.getSession(true);
+               if (session == null) {
+                   session.setAttribute("lunxun", 0);
+                   session.setAttribute("qrlunxun", 0);
+               }
 
-            //第一个轮询开始
-            Subject subject = SecurityUtils.getSubject();
-            session = subject.getSession(true);
-            if (session == null) {
-                session.setAttribute("lunxun",0);
-                session.setAttribute("qrlunxun",0);
-            }
+               Integer lunxun = (Integer) session.getAttribute("lunxun");
 
-            Integer lunxun = (Integer) session.getAttribute("lunxun");
-
-            if (lunxun == null || lunxun > qrChannelList.size()-1) {
-                lunxun = 0;
-            }
-            i=lunxun;
-
-
-            qrChannel = qrChannelList.get(i);
-
-            System.out.println("开始校验通道了");
-            logger.info("校验的通道为:" + qrChannel.getName());
-            System.out.println("校验的通道为:"+qrChannel.getName());
-            //添加校验:控制二维码通道的访问速率
-            if (qrChannel !=null && (qrChannel.getLastRequestTime() ==null || now().after(DateUtils.addSeconds(qrChannel.getLastRequestTime(),qrChannel.getRate().intValue())))) {
-
-                //得到二维码通道的充值金额
-                BigDecimal rechargeAmount = qrChannel.getRechargeAmount();
-
-                //得到二维码通道的冻结资金额
-                BigDecimal frozenCapitalPool = qrChannel.getFrozenCapitalPool();
+               if (lunxun == null || lunxun > qrChannelList.size() - 1) {
+                   lunxun = 0;
+               }
+               i = lunxun;
 
 
-                //防止充值资金池溢出,要求充值资金池不能少于1000元
-                //BigDecimal actualAmount = rechargeAmount.multiply(new BigDecimal(1000));
-                BigDecimal actualAmount = new BigDecimal(1000.00);
-                logger.info("资金池----->" + qrChannel.getName() + "限制金额为:" + actualAmount);
-                /*金额的差度，判断用户是否输入金额*/
-                int status = actualAmount.compareTo(rechargeAmount.subtract(totalMOney));
+               qrChannel = qrChannelList.get(i);
+
+               System.out.println("开始校验通道了");
+               logger.info("校验的通道为:" + qrChannel.getName());
+               System.out.println("校验的通道为:" + qrChannel.getName());
+               //添加校验:控制二维码通道的访问速率
+               if (qrChannel != null && (qrChannel.getLastRequestTime() == null || now().after(DateUtils.addSeconds(qrChannel.getLastRequestTime(), qrChannel.getRate().intValue())))) {
+
+                   //得到二维码通道的充值金额
+                   BigDecimal rechargeAmount = qrChannel.getRechargeAmount();
+
+                   //得到二维码通道的冻结资金额
+                   BigDecimal frozenCapitalPool = qrChannel.getFrozenCapitalPool();
 
 
-                if (status <= 0) {
-                    logger.info("二维码通道:" + qrChannel.getName() + "校验成功!");
-                    session.setAttribute("lunxun", lunxun + 1);
-                    //把请求金额从充值资金池减去然后加进冻结资金池
-                    BigDecimal subtract = rechargeAmount.subtract(totalMOney);
-                    logger.info("充值资金池:----->" + rechargeAmount + "请求金额为:------->" + totalMOney + "相减等于:----->" + subtract);
-                    BigDecimal add = frozenCapitalPool.add(totalMOney);
-                    logger.info("冻结资金池:----->" + frozenCapitalPool + "请求金额为:------->" + totalMOney + "相加等于:----->" + add);
-                    qrChannel.setRechargeAmount(subtract);
-                    qrChannel.setFrozenCapitalPool(add);
-                    qrChannel.setLastRequestTime(now());
-                    qrChannelDao.save(qrChannel);
-                    //得到校验成功的二维码通道的商户id
-                    merchantId = qrChannel.getMerchantId();
-
-                    /*进行第二级轮巡*/
-                    this.test(qrChannelList,totalMOney,payType,session);
+                   //防止充值资金池溢出,要求充值资金池不能少于1000元
+                   //BigDecimal actualAmount = rechargeAmount.multiply(new BigDecimal(1000));
+                   BigDecimal actualAmount = new BigDecimal(1000.00);
+                   logger.info("资金池----->" + qrChannel.getName() + "限制金额为:" + actualAmount);
+                   /*金额的差度，判断用户是否输入金额*/
+                   int status = actualAmount.compareTo(rechargeAmount.subtract(totalMOney));
 
 
-                }else {
+                   if (status <= 0) {
+                       logger.info("二维码通道:" + qrChannel.getName() + "校验成功!");
+                       session.setAttribute("lunxun", lunxun + 1);
+                       //把请求金额从充值资金池减去然后加进冻结资金池
+                       BigDecimal subtract = rechargeAmount.subtract(totalMOney);
+                       logger.info("充值资金池:----->" + rechargeAmount + "请求金额为:------->" + totalMOney + "相减等于:----->" + subtract);
+                       BigDecimal add = frozenCapitalPool.add(totalMOney);
+                       logger.info("冻结资金池:----->" + frozenCapitalPool + "请求金额为:------->" + totalMOney + "相加等于:----->" + add);
+                       qrChannel.setRechargeAmount(subtract);
+                       qrChannel.setFrozenCapitalPool(add);
+                       qrChannel.setLastRequestTime(now());
+                       qrChannelDao.save(qrChannel);
+                       //得到校验成功的二维码通道的商户id
+                       merchantId = qrChannel.getMerchantId();
 
-                    session.setAttribute("lunxun",lunxun+1 );}
-            }else {
-                session.setAttribute("lunxun",lunxun+1 );
-                throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
-            }
-        }
-        return qrcode;
+                       /*进行第二级轮巡*/
+                       this.test(qrChannelList, totalMOney, payType, merchantId, session);
+
+
+                   } else {
+
+                       session.setAttribute("lunxun", lunxun + 1);
+                   }
+               } else {
+                   session.setAttribute("lunxun", lunxun + 1);
+                   throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
+               }
+           }
+           return qrcode;
+
     }
 
 
 
     /*用于第二次轮巡*/
-    private void test(List<QRChannel> qrChannelList, BigDecimal totalMOney , int payType,Session session){
+    private void test(List<QRChannel> qrChannelList, BigDecimal totalMOney , int payType,Long mer,Session session){
        // System.out.println("进入第二级轮巡");
         //得到对应商户id,支付类型,金额,状态为开始的支付二维码集合
         List<qrcode> qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, totalMOney);
         logger.info("得到"+qrChannel.getName()+"符合条件的二维码有"+qrcodeList.size()+"个");
         logger.info("调用任意额度码");
         /*如果第一次的查询是0，则再次查询*/
-        if (qrcodeList.size()==0){
+        if (qrcodeList.size()==0&&!cf.equals(mer)){
           //  System.out.println("list是0");
             /*根据商户ID和状态和二维码类型和收款金额来查找任意的二维码*/
             qrcodeList=qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, new BigDecimal(0));

@@ -150,7 +150,7 @@ public class QRPayService extends BasePayService {
         List<QRChannel> qrChannelList = qrChannelDao.findByStatus(1);
         //组装响应参数
         JSONObject jsonObject = new JSONObject();
-        qrcode qrcode = qrCheckOutService.checkout(qrChannelList, totalMOney, type, request);
+        qrcode qrcode = qrCheckOutService.checkout(qrChannelList, totalMOney, type,merchantId, request);
         String codeData = qrcode.getCodeData();
         Long qrcodeid=qrcode.getId();
         if ("4".equals(payType)){

@@ -19,8 +19,15 @@ import java.util.*;
 
 import static co.b4pay.api.common.utils.DateUtil.now;
 
+
+
+//获取二维码的通道
+private QRChannel qrChannel;
+private Session session;
+        Long merchantId;
+        Long cf = 100000000000068L;
 @Service
-public class QRCheckOutServiceZGP extends BasePayService {
+public class QRCheckOutService extends BasePayService {
 
     private static final Logger logger = LoggerFactory.getLogger(QRCheckOutService.class);
     private static final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -35,7 +42,7 @@ public class QRCheckOutServiceZGP extends BasePayService {
         for (int i = 0; i <= qrChannelList.size(); i++) {
             //轮询开始
             Subject subject = SecurityUtils.getSubject();
-            Session session = subject.getSession(true);
+            /*Session */session = subject.getSession(true);
             if (session == null) {
                 session.setAttribute("lunxun", 0);
                 //session.setAttribute("qrlunxun",0);
@@ -45,7 +52,7 @@ public class QRCheckOutServiceZGP extends BasePayService {
                 lunxun = 0;
             }
             i = lunxun;
-            QRChannel qrChannel = qrChannelList.get(i);
+            /*QRChannel*/ qrChannel = qrChannelList.get(i);
             logger.info("校验的通道为:" + qrChannel.getName());
             //添加校验:控制二维码通道的访问速率
             if (qrChannel != null && (qrChannel.getLastRequestTime() == null || now().after(DateUtils.addSeconds(qrChannel.getLastRequestTime(), qrChannel.getRate().intValue())))) {
@@ -61,6 +68,7 @@ public class QRCheckOutServiceZGP extends BasePayService {
                 if (status <= 0) {
                     logger.info("二维码通道:" + qrChannel.getName() + "校验成功!");
                     session.setAttribute("lunxun", lunxun + 1);
+
                     //得到校验成功的二维码通道的商户id
                     Long qrMerchantId = qrChannel.getMerchantId();
                     //得到对应商户id,支付类型,金额,状态为开始的支付二维码集合
@@ -68,7 +76,9 @@ public class QRCheckOutServiceZGP extends BasePayService {
                     logger.info("得到" + qrChannel.getName() + "符合条件的二维码有" + qrcodeList.size() + "个");
                     //创富金行的商户ID为
                     Long cf = 100000000000068L;
+
                     if (qrcodeList.size() == 0 && !cf.equals(merchantId)) {
+
                         logger.info("调用任意额度码");
                         qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, new BigDecimal(0));
                         logger.info("任意额度码有" + qrcodeList.size() + "个");
@@ -162,6 +172,77 @@ public class QRCheckOutServiceZGP extends BasePayService {
         }
         return qrcode;
     }
+
+
+
+    /*用于第二次轮巡*/
+    private void test(List<QRChannel> qrChannelList, BigDecimal totalMOney , int payType,Long mer,Session session){
+        // System.out.println("进入第二级轮巡");
+        //得到对应商户id,支付类型,金额,状态为开始的支付二维码集合
+        List<qrcode> qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, totalMOney);
+        logger.info("得到"+qrChannel.getName()+"符合条件的二维码有"+qrcodeList.size()+"个");
+        logger.info("调用任意额度码");
+        /*如果第一次的查询是0，则再次查询*/
+        if (qrcodeList.size()==0&&!cf.equals(mer)){
+            //  System.out.println("list是0");
+            /*根据商户ID和状态和二维码类型和收款金额来查找任意的二维码*/
+            qrcodeList=qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, new BigDecimal(0));
+            logger.info("第二次任意额度码有"+qrcodeList.size()+"个");
+            for (int a=0;a<qrcodeList.size();a++){
+                Long id = qrcodeList.get(a).getId();
+                if(qrcodeList.get(a).getNo()>=10) {
+                    qrCodeDao.updateStatus(id, 0);//冻结该二维码
+                }else {
+                    qrCodeDao.updateNo(id, 0);//更新NO记录
+                }
+            }
+        }
+        else {
+            /*第一次查询是非0*/
+            // System.out.println("list不是0");
+            logger.info("第一次查询任意额度码有"+qrcodeList.size()+"个");
+            for (int a=0;a<qrcodeList.size();a++){
+                Long id = qrcodeList.get(a).getId();
+                if(qrcodeList.get(a).getNo()>=10) {
+                    qrCodeDao.updateStatus(id, 0);//冻结该二维码
+                }else {
+                    qrCodeDao.updateNo(id, 0);//更新NO记录
+                }
+            }
+        }
+        /*我的，更新No之后，重新获取任意的二维码*/
+        /*  qrcodeList=null;*/
+        qrcodeList=qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(merchantId, 1, payType, new BigDecimal(0));
+        logger.info("过滤后任意额度码有"+qrcodeList.size()+"个");
+        /*第二级*/
+        for (int j = 0; j < qrcodeList.size(); j++) {
+            Integer qrlunxun = (Integer) session.getAttribute("qrlunxun");
+            if (qrlunxun == null || qrlunxun > qrcodeList.size()-1) {
+                qrlunxun = 0;
+            }
+            j=qrlunxun;
+            qrcode = qrcodeList.get(j);
+            logger.info("校验的二维码是"+qrcode.getName());
+            if (qrcode !=null && (qrcode.getLastRequestTime() ==null||now().after(DateUtils.addSeconds(qrcode.getLastRequestTime(),qrcode.getRate().intValue())) )){
+                String codeData = qrcode.getCodeData();
+                if (codeData != null){
+                    logger.info("校验通过的二维码是"+qrcode.getName());
+                    qrcode.setLastRequestTime(now());
+                    qrcode.setTurnover(totalMOney);
+                    qrCodeDao.save(qrcode);
+                    session.setAttribute("qrlunxun",qrlunxun+1 );
+                    break;
+                }
+            }else {
+                session.setAttribute("qrlunxun",qrlunxun+1 );
+            }
+
+        }
+
+        /*第二级结束*/
+        System.out.println("第二级轮巡结束");
+    }
+
 
     /**
      * 订单计时器
