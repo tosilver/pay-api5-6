@@ -37,6 +37,11 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
+        <dependency><!--我的添加springboot热部署-->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+        </dependency>
+
         <!-- 引入spring-boot的WEB模块 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
