@@ -66,6 +66,13 @@ public class BasePayService {
     @Autowired
     protected BankCradDao bankCradDao;
 
+    @Autowired
+    protected KJAgreeapplyDao kjAgreeapplyDao;
+
+
+    @Autowired
+    protected FrozenCapitalTradeDao frozenCapitalTradeDao;
+
     protected synchronized Channel getChannel(Long merchantId, Router router, BigDecimal totalAmount, String ip4) {
         List<Channel> channelList = channelDao.findByRouterIdAndStatus(router.getId(), 1, ip4);
         if (CollectionUtils.isEmpty(channelList)) {

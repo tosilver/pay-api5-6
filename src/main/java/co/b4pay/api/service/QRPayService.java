@@ -1,11 +1,13 @@
 package co.b4pay.api.service;
 
+import co.b4pay.api.common.config.MainConfig;
 import co.b4pay.api.common.constants.Constants;
 import co.b4pay.api.common.enums.ChannelType;
 import co.b4pay.api.common.exception.BizException;
 import co.b4pay.api.common.signature.HmacSHA1Signature;
 import co.b4pay.api.common.signature.SignatureUtil;
 import co.b4pay.api.common.tosdomutils.AESUtil;
+import co.b4pay.api.common.tosdomutils.HttpClient;
 import co.b4pay.api.common.utils.DateUtil;
 import co.b4pay.api.common.utils.HttpsUtils;
 import co.b4pay.api.common.utils.WebUtil;
@@ -44,9 +46,9 @@ public class QRPayService extends BasePayService {
 
 
     /**
-     * 支付链接
+     * 定时链接
      */
-    //private static final String MALLPAY_API_DOMAIN = MainConfig.getConfig("MALLPAY_API_DOMAIN");
+    private static final String timer_api_domain = MainConfig.getConfig("TIMER_API_DOMAIN");
 
     private static HmacSHA1Signature signature = new HmacSHA1Signature();
 
@@ -150,7 +152,7 @@ public class QRPayService extends BasePayService {
         List<QRChannel> qrChannelList = qrChannelDao.findByStatus(1);
         //组装响应参数
         JSONObject jsonObject = new JSONObject();
-        qrcode qrcode = qrCheckOutService.checkout(qrChannelList, totalMOney, type, request);
+        qrcode qrcode = qrCheckOutService.checkout(qrChannelList, totalMOney, type,merchantId, request,outTradeNo);
         String codeData = qrcode.getCodeData();
         Long qrcodeid=qrcode.getId();
         if ("4".equals(payType)){
@@ -199,7 +201,7 @@ public class QRPayService extends BasePayService {
         //根据返回二维码信息中的商户号查询码商通道
         Long qrcodeMerchantId = qrcode.getMerchantId();
         QRChannel qrChannel = qrChannelDao.findByMerchantIdaAndId(qrcodeMerchantId);
-        BigDecimal serviceCharge = totalMOney.multiply(merchantRate.getCostRate(), new MathContext(2, RoundingMode.HALF_UP)).divide(new BigDecimal("100"), 2, BigDecimal.ROUND_UP).add(merchantRate.getPayCost());
+        BigDecimal serviceCharge = totalMOney.multiply(merchantRate.getCostRate(), new MathContext(4, RoundingMode.HALF_UP)).divide(new BigDecimal("100"), 2, BigDecimal.ROUND_UP).add(merchantRate.getPayCost());
         //String tradeId = String.format("%s%s", DateUtil.dateToStr(DateUtil.getTime(), DateUtil.YMdhmsS_noSpli), RandomStringUtils.randomNumeric(15));//交易订单号
         Trade trade = new Trade();
         trade.setId(tradeId);
@@ -232,7 +234,16 @@ public class QRPayService extends BasePayService {
         jobTrade.setNotifyUrl(notifyUrl);
         jobTradeDao.save(jobTrade);
         logger.info("响应参数为:"+jsonObject.toJSONString());
-        qrCheckOutService.timer1(outTradeNo);
+        /*qrCheckOutService.timer1(outTradeNo);*/
+        //构建向商场的请求参数
+        StringBuilder sb = new StringBuilder();
+        sb.append("?");
+        sb.append("tradeNo=").append(outTradeNo);
+        // 向商城发送get请求
+        HttpClient httpClient = new HttpClient(timer_api_domain + sb.toString());
+        httpClient.get();
+        String content = httpClient.getContent();
+        logger.info("定时任务返回:"+content.trim());
         return jsonObject;
     }
 

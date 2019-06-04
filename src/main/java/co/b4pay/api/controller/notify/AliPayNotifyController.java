@@ -252,8 +252,8 @@ public class AliPayNotifyController {
                         throw new RuntimeException("没有可用的分账id");
                     }
                     //---------------------------------------------------
-                    //}
-                    break;*/
+                    //}*/
+                    break;
                 case "TRADE_CLOSED":
                     logger.warn("查询返回该订单支付失败或被关闭!!!");
                     break;
