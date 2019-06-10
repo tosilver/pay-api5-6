@@ -24,7 +24,7 @@ public class QpayUtil {
 			sb.deleteCharAt(sb.length()-1);
 		}
 		String sign = md5(sb.toString().getBytes("UTF-8"));//记得是md5编码的加签
-		System.out.println("sign:"+sign+":"+sb.toString());
+		//System.out.println("sign:"+sign+":"+sb.toString());
 		params.remove("key");
 		return sign;
 	}
@@ -52,7 +52,7 @@ public class QpayUtil {
 	 }
 	 
 	private static Map<String,String> handleResult(String result,String appkey) throws Exception{
-		System.out.println("返回:"+result+"");
+		//System.out.println("返回:"+result+"");
 		Map map = json2Obj(result, Map.class);
 		if(map == null){
 			throw new Exception("返回数据错误");

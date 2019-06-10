@@ -23,7 +23,7 @@ public final class AjaxResponse implements Serializable {
     /**
      * 成功返回消息
      */
-    private static final String SUCCESS_MSG = "";
+    private static final String SUCCESS_MSG = "SUCCESS";
 
     /**
      * 失败状态码

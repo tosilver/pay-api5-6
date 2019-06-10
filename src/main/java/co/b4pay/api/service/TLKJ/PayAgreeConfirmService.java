@@ -4,45 +4,45 @@ import co.b4pay.api.common.TLKJ.HttpConnectionUtil;
 import co.b4pay.api.common.TLKJ.QpayConstants;
 import co.b4pay.api.common.TLKJ.QpayUtil;
 import co.b4pay.api.common.constants.Constants;
+import co.b4pay.api.common.enums.ChannelType;
 import co.b4pay.api.common.exception.BizException;
 import co.b4pay.api.common.signature.HmacSHA1Signature;
 import co.b4pay.api.common.signature.SignatureUtil;
+import co.b4pay.api.common.utils.DateUtil;
 import co.b4pay.api.common.utils.HttpsUtils;
 import co.b4pay.api.common.utils.WebUtil;
-import co.b4pay.api.model.KJAgreeapply;
-import co.b4pay.api.model.Router;
-import co.b4pay.api.model.Trade;
+import co.b4pay.api.model.*;
 import co.b4pay.api.service.BasePayService;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.*;
 
-import static co.b4pay.api.common.utils.DateUtil.now;
-
 /**
- * 通联快捷签约申请确认service
+ * 通联快捷签约申请service
  *
  * @author zgp
  * @version
  */
 @Service
 //@Transactional
-public class AgreeappFirmlyService extends BasePayService {
+public class PayAgreeConfirmService extends BasePayService {
 
-    private static final Logger logger = LoggerFactory.getLogger(AgreeappFirmlyService.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(PayAgreeConfirmService.class);
     private HmacSHA1Signature signature = new HmacSHA1Signature();
-
-
 
     public JSONObject executeReturn(Long merchantId, Router router, JSONObject params, HttpServletRequest request) throws BizException {
 
-        logger.info("TLKJ签约申请确认-->executeReturn:" + params);
+        logger.info("TLKJPayService-->executeReturn:" + params);
         Map m = new HashMap<>();
         Enumeration<String> parameterNames = request.getParameterNames();
         while (parameterNames.hasMoreElements()) {
@@ -54,7 +54,7 @@ public class AgreeappFirmlyService extends BasePayService {
             String content = SignatureUtil.getSignatureContent(m, true);
             String sign = signature.sign(content, merchantDao.getOne(merchantId).getSecretKey(), Constants.CHARSET_UTF8);
             m.put("signature", sign);
-            String result = HttpsUtils.post( "http://127.0.0.1:9988/pay/agreeconfirmExecute.do", null, m);
+            String result = HttpsUtils.post( "http://127.0.0.1:9988/pay/payagreeconfirmExecute.do", null, m);
             return JSONObject.parseObject(result);
         } catch (Exception e) {
             throw new BizException(e.getMessage());
@@ -63,91 +63,65 @@ public class AgreeappFirmlyService extends BasePayService {
     }
 
     public JSONObject execute(Long merchantId, Router router, JSONObject params, HttpServletRequest request) throws Exception {
-        logger.info("TLKJ签约申请确认-->execute:" + params);
+        logger.info("TLKJPayService-->execute:" + params);
+        //商户订单号
+        String orderid = params.getString("orderid");
+        Trade trade = tradeDao.findByMerchantOrderNo(orderid);
         String serverUrl = WebUtil.getServerUrl(request);
         logger.warn("server url :" + serverUrl);
         //按要求组装参数
-        //商户用户号:要求唯一,身份的识别
-        String merUserId = params.getString("meruserid");
-        KJAgreeapply agreeapply = kjAgreeapplyDao.findByMeruserId(merUserId);
-        if (agreeapply == null){
-            throw new BizException("请提供准确的meruserid");
-        }
-        //卡类型
-        //00:借记卡
-        //02:准贷记卡/贷记卡
-        String acctType = agreeapply.getAcctType();
-        //String acctType = params.getString("accttype");
-        //银行卡号
-        String acctNo = agreeapply.getAcctNo();
-        //String acctNo = params.getString("acctno");
-        //证件号  如末位是X，必须大写
-        String idNo = agreeapply.getIdNo();
-        //String idNo = params.getString("idno");
-        //户名
-        String acctName = agreeapply.getAcctName();
-        //String acctName = params.getString("acctname");
-        //手机号码
-        String mobile = agreeapply.getMobile();
-        //String mobile = params.getString("mobile");
-        String validDate="";
-        String cvv2="";
-        if ("02".equals(acctType)){
-            //有效期 信用卡不能为空
-            validDate = agreeapply.getValiddate();
-            //String validDate = params.getString("validdate");
-            //cvv2  信用卡不能为空
-            cvv2 = agreeapply.getCvv2();
-            //String cvv2 = params.getString("cvv2");
-        }
-        //smscode 短信验证码
+        //协议编号
+        String agreeid = params.getString("agreeid");
+        //
         String smscode = params.getString("smscode");
+        //
         String thpinfo = params.getString("thpinfo");
+
         //封装请求参数
         Map<String, String> map = buildBasicMap();
-        map.put("meruserid",merUserId);
-        map.put("accttype",acctType);
-        map.put("acctno",acctNo);
-        map.put("idno",idNo);
-        map.put("acctname",acctName);
-        map.put("mobile",mobile);
-        map.put("cvv2", cvv2);
-        map.put("validdate", validDate);
-        map.put("smscode", smscode);
-        if (thpinfo !=null){
-            map.put("thpinfo", smscode);
+        map.put("orderid",trade.getId());
+        map.put("agreeid",agreeid);
+        map.put("smscode",smscode);
+        if ( thpinfo != null){
+            map.put("thpinfo",thpinfo);
         }
-        Map<String, String> dorequest = QpayUtil.dorequest(QpayConstants.SYB_APIURL_QPAY + "/agreeconfirm", map, QpayConstants.SYB_APPKEY);
+
+        Map<String, String> dorequest = QpayUtil.dorequest(QpayConstants.SYB_APIURL_QPAY + "/payagreeconfirm", map, QpayConstants.SYB_APPKEY);
         logger.info("返回的参数如下:");
         print(dorequest);
         String dorequestJson = JSON.toJSONString(dorequest);
         JSONObject resultJson = JSONObject.parseObject(dorequestJson);
         String retcode = resultJson.getString("retcode");
-        String agreeid = resultJson.getString("agreeid");
-        String bankcode = resultJson.getString("bankcode");
-        String bankname = resultJson.getString("bankname");
         String errmsg = resultJson.getString("errmsg");
         String trxstatus = resultJson.getString("trxstatus");
-        String retmsg = resultJson.getString("retmsg");
+        String thpinfo1 = resultJson.getString("thpinfo");
+        //交易单号
+        String trxid = resultJson.getString("trxid");
+        //渠道平台交易单号
+        String chnltrxid = resultJson.getString("chnltrxid");
+        if (thpinfo1 == null){
+            thpinfo1="";
+        }
         if ("SUCCESS".equals(retcode)){
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("msg", "接口调用成功");
             jsonObject.put("retcode", retcode);
-            jsonObject.put("agreeid", agreeid);
-            jsonObject.put("bankcode", bankcode);
-            jsonObject.put("bankname", bankname);
             jsonObject.put("errmsg", errmsg);
             jsonObject.put("trxstatus", trxstatus);
-            agreeapply.setStatus(1);
-            agreeapply.setUpdateTime(now());
-            agreeapply.setAgreeid(agreeid);
-            kjAgreeapplyDao.save(agreeapply);
+            jsonObject.put("orderid",orderid);
+            if ("0000".equals(trxstatus)){
+                trade.setTradeState(0);
+                trade.setPayOrderNo(trxid);
+                tradeDao.save(trade);
+                jsonObject.put("trxid",trxid);
+            }else if ("1999".equals(trxstatus)){
+                jsonObject.put("thpinfo",thpinfo1);
+            }
             return jsonObject;
         } else if ("FAIL".equals(retcode)){
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("msg", "接口调用失败");
             jsonObject.put("retcode", retcode);
-            jsonObject.put("retmsg", retmsg);
             return jsonObject;
         }else {
             throw new BizException("服务器异常!!!");
@@ -187,7 +161,6 @@ public class AgreeappFirmlyService extends BasePayService {
      * @param map
      */
     public static void print(Map<String, String> map){
-        //System.out.println("返回数据如下:");
         if(map!=null){
             for(String key:map.keySet()){
                 logger.info(key+":"+map.get(key));

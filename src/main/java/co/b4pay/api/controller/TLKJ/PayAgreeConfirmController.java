@@ -5,8 +5,8 @@ import co.b4pay.api.common.web.BaseController;
 import co.b4pay.api.model.Router;
 import co.b4pay.api.model.base.AjaxResponse;
 import co.b4pay.api.service.RouterService;
-import co.b4pay.api.service.TLKJ.AgreeappFirmlyService;
-import co.b4pay.api.service.TLKJ.AgreeapplyService;
+import co.b4pay.api.service.TLKJ.PayAgreeConfirmService;
+import co.b4pay.api.service.TLKJ.PayApplyService;
 import com.alibaba.fastjson.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,32 +18,32 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 通联签约申请确认接口
+ * 通联支付申请接口
  *
  * @author YK
  * @version $Id v 0.1 2018年06月04日 21:32 Exp $
  */
 @RestController
-public class AgreeconFirmController extends BaseController {
-    private static final Logger logger = LoggerFactory.getLogger(AgreeconFirmController.class);
+public class PayAgreeConfirmController extends BaseController {
+    private static final Logger logger = LoggerFactory.getLogger(PayAgreeConfirmController.class);
 
     private static final String ROUTER_KEY = "TLKJPay";
 
 
-    private static final String[] REQUIRED_PARAMS = new String[]{"meruserid","smscode"};
-    private static final String[] OPTIONAL_PARAMS = new String[]{"validdate","cvv2"};
+    private static final String[] REQUIRED_PARAMS = new String[]{"orderid","agreeid"};
+    private static final String[] OPTIONAL_PARAMS = new String[]{"smscode","thpinfo"};
 
     @Autowired
     private RouterService routerService;
 
     @Autowired
-    private AgreeappFirmlyService agreeappFirmlyService;
+    private PayAgreeConfirmService payAgreeConfirmService;
 
-    @RequestMapping(value = "/pay/agreeconfirm.do", method = RequestMethod.POST)
+    @RequestMapping(value = "/pay/payagreeconfirm.do", method = RequestMethod.POST)
     public Object agreeapply(HttpServletRequest request) {
         try {
             Router router =routerService.findById(ROUTER_KEY);
-            return agreeappFirmlyService.executeReturn(getMerchantId(request), router, getParams(request), request);
+            return payAgreeConfirmService.executeReturn(getMerchantId(request), router, getParams(request), request);
         } catch (BizException e) {
             logger.warn(e.getMessage());
             return AjaxResponse.failure(e.getMessage());
@@ -54,11 +54,11 @@ public class AgreeconFirmController extends BaseController {
 
     }
 
-    @RequestMapping(value = "/pay/agreeconfirmExecute.do", method = RequestMethod.POST)
+    @RequestMapping(value = "/pay/payagreeconfirmExecute.do", method = RequestMethod.POST)
     public AjaxResponse agreeapplyExecute(HttpServletRequest request) {
         try {
             Router router =routerService.findById(ROUTER_KEY);
-            JSONObject jsonObject = agreeappFirmlyService.execute(getMerchantId(request), router, getParams(request), request);
+            JSONObject jsonObject = payAgreeConfirmService.execute(getMerchantId(request), router, getParams(request), request);
             return AjaxResponse.success(jsonObject);
         } catch (BizException e) {
             logger.warn(e.getMessage());

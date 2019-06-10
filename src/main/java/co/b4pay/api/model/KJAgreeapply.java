@@ -2,10 +2,7 @@ package co.b4pay.api.model;
 
 import co.b4pay.api.model.base.BaseEntity;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -19,9 +16,9 @@ import java.util.Date;
 @Table(name = "dst_KJ_agreeapply")
 public class KJAgreeapply extends BaseEntity {
 
-
-
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;                                                // 唯一标识ID
     private String meruserId;                                        // 用户uid
     private String acctType;                                        // 卡类型
@@ -36,6 +33,7 @@ public class KJAgreeapply extends BaseEntity {
     private Date updateTime;
     @Column(name = "response", columnDefinition = "longtext")
     private String response;
+    private String agreeid;                                    //用户签约成功返回的协议编号
 
 
     public Long getId() {
@@ -140,5 +138,13 @@ public class KJAgreeapply extends BaseEntity {
 
     public void setResponse(String response) {
         this.response = response;
+    }
+
+    public String getAgreeid() {
+        return agreeid;
+    }
+
+    public void setAgreeid(String agreeid) {
+        this.agreeid = agreeid;
     }
 }

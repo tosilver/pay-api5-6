@@ -30,7 +30,7 @@ public class AgreeapplyController extends BaseController {
     private static final String ROUTER_KEY = "TLKJPay";
 
 
-    private static final String[] REQUIRED_PARAMS = new String[]{"meruserid","accttype","acctno","idno","acctname","mobile"};
+    private static final String[] REQUIRED_PARAMS = new String[]{"accttype","acctno","idno","acctname","mobile"};
     private static final String[] OPTIONAL_PARAMS = new String[]{"validdate","cvv2"};
 
     @Autowired

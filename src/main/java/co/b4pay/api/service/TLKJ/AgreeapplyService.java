@@ -1,35 +1,23 @@
 package co.b4pay.api.service.TLKJ;
 
-import co.b4pay.api.common.TLKJ.HttpConnectionUtil;
 import co.b4pay.api.common.TLKJ.QpayConstants;
 import co.b4pay.api.common.TLKJ.QpayUtil;
-import co.b4pay.api.common.config.MainConfig;
 import co.b4pay.api.common.constants.Constants;
-import co.b4pay.api.common.enums.ChannelType;
 import co.b4pay.api.common.exception.BizException;
 import co.b4pay.api.common.signature.HmacSHA1Signature;
 import co.b4pay.api.common.signature.SignatureUtil;
-import co.b4pay.api.common.utils.DateUtil;
 import co.b4pay.api.common.utils.HttpsUtils;
 import co.b4pay.api.common.utils.WebUtil;
-import co.b4pay.api.common.zengutils.ESIDGenerate;
-import co.b4pay.api.common.zengutils.HCMD5;
-import co.b4pay.api.common.zengutils.HttpClientUtil;
-import co.b4pay.api.dao.KJAgreeapplyDao;
-import co.b4pay.api.model.*;
+import co.b4pay.api.model.KJAgreeapply;
+import co.b4pay.api.model.Router;
 import co.b4pay.api.service.BasePayService;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
-import java.security.PublicKey;
 import java.util.*;
 
 import static co.b4pay.api.common.utils.DateUtil.now;
@@ -38,7 +26,6 @@ import static co.b4pay.api.common.utils.DateUtil.now;
  * 通联快捷签约申请service
  *
  * @author zgp
- * @version
  */
 @Service
 //@Transactional
@@ -51,10 +38,9 @@ public class AgreeapplyService extends BasePayService {
     private HmacSHA1Signature signature = new HmacSHA1Signature();
 
 
-
     public JSONObject executeReturn(Long merchantId, Router router, JSONObject params, HttpServletRequest request) throws BizException {
 
-        logger.info("TLKJPayService-->executeReturn:" + params);
+        logger.info("TLKJ签约申请-->executeReturn:" + params);
         Map m = new HashMap<>();
         Enumeration<String> parameterNames = request.getParameterNames();
         while (parameterNames.hasMoreElements()) {
@@ -66,7 +52,7 @@ public class AgreeapplyService extends BasePayService {
             String content = SignatureUtil.getSignatureContent(m, true);
             String sign = signature.sign(content, merchantDao.getOne(merchantId).getSecretKey(), Constants.CHARSET_UTF8);
             m.put("signature", sign);
-            String result = HttpsUtils.post( "http://127.0.0.1:9988/pay/agreeapplyExecute.do", null, m);
+            String result = HttpsUtils.post("http://127.0.0.1:9988/pay/agreeapplyExecute.do", null, m);
             return JSONObject.parseObject(result);
         } catch (Exception e) {
             throw new BizException(e.getMessage());
@@ -75,14 +61,14 @@ public class AgreeapplyService extends BasePayService {
     }
 
     public JSONObject execute(Long merchantId, Router router, JSONObject params, HttpServletRequest request) throws Exception {
-        logger.info("TLKJPayService-->execute:" + params);
+        logger.info("TLKJ签约申请-->execute:" + params);
 
         String serverUrl = WebUtil.getServerUrl(request);
         logger.warn("server url :" + serverUrl);
         long time = System.currentTimeMillis();
         //按要求组装参数
         //商户用户号:要求唯一,身份的识别
-        String merUserId = params.getString("meruserid");
+        String merUserId = generateUID();
         //卡类型
         //00:借记卡
         //02:准贷记卡/贷记卡
@@ -95,53 +81,71 @@ public class AgreeapplyService extends BasePayService {
         String acctName = params.getString("acctname");
         //手机号码
         String mobile = params.getString("mobile");
-        String validDate=null;
-        String cvv2=null;
-        if ("02".equals(acctType)){
-            //有效期 信用卡不能为空
-            validDate = params.getString("validdate");
-            //cvv2  信用卡不能为空
-            cvv2 = params.getString("cvv2");
+        //有效期(信用卡不能为空)
+        String validDate = params.getString("validdate");
+        //cvv2(信用卡不能为空)
+        String cvv2 = params.getString("cvv2");
+        if ("02".equals(acctType) && validDate == null){
+            throw new BizException("有效期不能为空!!!");
+        }else if (validDate == null){
+            validDate="";
+        }
+        if ("02".equals(acctType) && cvv2 == null){
+            throw new BizException("cvv2不能为空!!!");
+        }else if (cvv2 == null){
+            cvv2="";
         }
         //封装请求参数
         Map<String, String> map = buildBasicMap();
-        map.put("meruserid",merUserId);
-        map.put("accttype",acctType);
-        map.put("acctno",acctNo);
-        map.put("idno",idNo);
-        map.put("acctname",acctName);
-        map.put("mobile",mobile);
+        map.put("meruserid", merUserId);
+        map.put("accttype", acctType);
+        map.put("acctno", acctNo);
+        map.put("idno", idNo);
+        map.put("acctname", acctName);
+        map.put("mobile", mobile);
         map.put("cvv2", cvv2);
         map.put("validdate", validDate);
-        //把加密以上参数
-        map.put("sign", QpayUtil.sign(map,QpayConstants.SYB_APPKEY));
-        HttpConnectionUtil http = new HttpConnectionUtil(QpayConstants.SYB_APIURL_QPAY + "/agreeapply");
-        http.init();
-        byte[] bys = http.postParams(map, true);
-        String result = new String(bys,"UTF-8");
-        JSONObject resultJson = JSONObject.parseObject(result);
+        Map<String, String> dorequest = QpayUtil.dorequest(QpayConstants.SYB_APIURL_QPAY + "/agreeapply", map, QpayConstants.SYB_APPKEY);
+        logger.info("返回的参数如下:");
+        print(dorequest);
+        String dorequestJson = JSON.toJSONString(dorequest);
+        JSONObject resultJson = JSONObject.parseObject(dorequestJson);
         String retcode = resultJson.getString("retcode");
-        if ("SUCCESS".equals(retcode)){
+        String retmsg = resultJson.getString("retmsg");
+        String errmsg = resultJson.getString("errmsg");
+        String trxstatus = resultJson.getString("trxstatus");
+        String thpinfo = resultJson.getString("thpinfo");
+        if (thpinfo == null){
+            thpinfo="";
+        }
+        if ("SUCCESS".equals(retcode)) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("msg", "接口调用成功");
+            jsonObject.put("meruserid",merUserId);
             jsonObject.put("retcode", retcode);
+            jsonObject.put("errmsg", errmsg);
+            jsonObject.put("trxstatus",trxstatus);
+            jsonObject.put("thpinfo",thpinfo);
             KJAgreeapply kjAgreeapply = new KJAgreeapply();
             kjAgreeapply.setMeruserId(merUserId);
             kjAgreeapply.setAcctName(acctName);
             kjAgreeapply.setAcctNo(acctNo);
             kjAgreeapply.setAcctType(acctType);
+            kjAgreeapply.setIdNo(idNo);
+            kjAgreeapply.setMobile(mobile);
             kjAgreeapply.setCreateTime(now());
             kjAgreeapply.setCvv2(cvv2);
-            kjAgreeapply.setResponse(resultJson.toJSONString());
+            kjAgreeapply.setResponse(dorequestJson);
             kjAgreeapply.setValiddate(validDate);
             kjAgreeapplyDao.save(kjAgreeapply);
             return jsonObject;
-        } else if ("FAIL".equals(retcode)){
+        } else if ("FAIL".equals(retcode)) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("msg", "接口调用失败");
             jsonObject.put("retcode", retcode);
+            jsonObject.put("retmsg",retmsg);
             return jsonObject;
-        }else {
+        } else {
             throw new BizException("服务器异常!!!");
         }
     }
@@ -149,12 +153,12 @@ public class AgreeapplyService extends BasePayService {
     /***
      * 生成uid 8位数字
      */
-    public static String generateUID(){
+    public static String generateUID() {
         Random random = new Random();
-        String result="";
-        for(int i=0;i<8;i++){
+        String result = "";
+        for (int i = 0; i < 12; i++) {
             //首字母不能为0
-            result += (random.nextInt(9)+1);
+            result += (random.nextInt(9) + 1);
         }
         return result;
     }
@@ -162,27 +166,29 @@ public class AgreeapplyService extends BasePayService {
 
     /**
      * 公共请求参数
+     *
      * @return
      */
-    public static Map<String, String> buildBasicMap(){
-        TreeMap<String,String> params = new TreeMap<String,String>();
+    public static Map<String, String> buildBasicMap() {
+        TreeMap<String, String> params = new TreeMap<String, String>();
         params.put("appid", QpayConstants.SYB_APPID);
         params.put("cusid", QpayConstants.SYB_CUSID);
         params.put("version", QpayConstants.version);
-        params.put("randomstr", System.currentTimeMillis()+"");
+        params.put("randomstr", System.currentTimeMillis() + "");
         return params;
     }
 
 
     /**
      * 对返回的数据进行轮询
+     *
      * @param map
      */
-    public static void print(Map<String, String> map){
-        System.out.println("返回数据如下:");
-        if(map!=null){
-            for(String key:map.keySet()){
-                System.out.println(key+";"+map.get(key));
+    public static void print(Map<String, String> map) {
+        //System.out.println("返回数据如下:");
+        if (map != null) {
+            for (String key : map.keySet()) {
+                logger.info(key + ":" + map.get(key));
             }
         }
     }
