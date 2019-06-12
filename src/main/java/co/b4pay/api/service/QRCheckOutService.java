@@ -68,7 +68,7 @@ public class QRCheckOutService extends BasePayService {
                     logger.info("得到" + qrChannel.getName() + "符合条件的二维码有" + qrcodeList.size() + "个");
                     //创富金行的商户ID为
                     Long[] cf ={100000000000068L,100000000000093L};
-                    if (qrcodeList.size() == 0 && !cf[0].equals(merchantId) /*&& !cf[1].equals(merchantId)*/) {
+                    if (qrcodeList.size() == 0 && !cf[0].equals(merchantId) && !cf[1].equals(merchantId)) {
                         logger.info("调用任意额度码");
                         qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, new BigDecimal(0));
                         logger.info("任意额度码有" + qrcodeList.size() + "个");

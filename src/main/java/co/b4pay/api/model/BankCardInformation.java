@@ -10,6 +10,7 @@ import javax.persistence.Table;
 @Table(name = "dst_bankcrad_information")
 public class BankCardInformation extends BaseEntity {
 
+    /*字段使用@Resource注解时，可省略set方法*/
     @Id
     private Long id;              // 唯一标识ID
     private Long merchantId;        //商户ID

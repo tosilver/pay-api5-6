@@ -35,7 +35,8 @@ public class AliH5PayController extends BaseController {
     @Autowired
     private RouterService routerService;
 
-    @Autowired
+    /*@Resource是按名字/type来自动注入的，当找不到相应的名称的bean时，会重新按照type来查找过。*/
+    @Autowired(required = false)/*当aliH5PayService是null时也不会报错，required设置允许值为null*/
     private AliH5PayService aliH5PayService;
 
     @RequestMapping(value = "/pay/aliH5Pay.do", method = RequestMethod.POST)
