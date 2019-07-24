@@ -30,8 +30,8 @@ public interface QRCodeDao extends JpaRepository<qrcode, Long> {
     @Query("FROM qrcode t WHERE t.id= :id and t.status = :status")
     qrcode findByIdAndStatus(@Param("id") Long id, @Param("status") int status);
 
-    @Query("FROM qrcode t WHERE t.merchantId= :merchantId and t.status = :status and t.codeType= :codeType and t.money= :money")
-    List<qrcode> findBymerchantIdAndStatusAndCodeTypeAndMoney(@Param("merchantId") Long merchantId, @Param("status") int status, @Param("codeType") int codeType, @Param("money") BigDecimal money);
+    @Query("FROM qrcode t WHERE t.channelId= :channelId and t.status = :status and t.codeType= :codeType and t.money= :money")
+    List<qrcode> findByChannelIdAndStatusAndCodeTypeAndMoney(@Param("channelId") Long channelId, @Param("status") int status, @Param("codeType") int codeType, @Param("money") BigDecimal money);
 
 
     @Modifying

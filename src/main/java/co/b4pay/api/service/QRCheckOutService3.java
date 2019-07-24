@@ -32,7 +32,7 @@ public class QRCheckOutService3 extends BasePayService {
     public qrcode checkout(List<QRChannel> qrChannelList, BigDecimal totalMOney, int payType, Long merchantId, HttpServletRequest request,String outTradeNo) {
         logger.info("校验开始:");
         qrcode qrcode = null;
-        for (int i = 0; i <= qrChannelList.size(); i++) {
+        /*for (int i = 0; i <= qrChannelList.size(); i++) {
             //轮询开始
             Subject subject = SecurityUtils.getSubject();
             Session session = subject.getSession(true);
@@ -113,7 +113,7 @@ public class QRCheckOutService3 extends BasePayService {
                                     j = random.nextInt(qrcodeList.size());
                                     logger.info("j------------------>" + j);
                                     //session.setAttribute("qrlunxun",qrlunxun+1 );
-                                    /*throw new BizException(String.format("暂无可用通道,稍等一会再试!"));*/
+                                    *//*throw new BizException(String.format("暂无可用通道,稍等一会再试!"));*//*
                                 }
                             }
                         }else {
@@ -161,7 +161,7 @@ public class QRCheckOutService3 extends BasePayService {
                                     j = random.nextInt(qrcodeList.size());
                                     logger.info("j------------------>" + j);
                                     //session.setAttribute("qrlunxun",qrlunxun+1 );
-                                    /*throw new BizException(String.format("暂无可用通道,稍等一会再试!"));*/
+                                    *//*throw new BizException(String.format("暂无可用通道,稍等一会再试!"));*//*
                                 }
                             }
                         }else {
@@ -175,11 +175,61 @@ public class QRCheckOutService3 extends BasePayService {
                 }
             } else {
                 session.setAttribute("lunxun", lunxun + 1);
-                /*throw new BizException(String.format("暂无可用通道,稍等一会再试!"));*/
+                *//*throw new BizException(String.format("暂无可用通道,稍等一会再试!"));*//*
             }
+        }*/
+        //先检验二维码通道集合长度
+        int size = qrChannelList.size();
+        if (size != 0){
+            //开始轮询通道
+            for (int i = 0; i <=qrChannelList.size(); i++) {
+                //轮询开始
+                Subject subject = SecurityUtils.getSubject();
+                Session session = subject.getSession(true);
+                if (session == null) {
+                    session.setAttribute("lunxun", 0);
+                    //session.setAttribute("qrlunxun",0);
+                }
+                Integer lunxun = (Integer) session.getAttribute("lunxun");
+                logger.info("当前的轮询数字为:"+lunxun);
+                if (lunxun == null || lunxun >= qrChannelList.size()) {
+                    lunxun = 0;
+                }
+                i = lunxun;
+                QRChannel qrChannel = qrChannelList.get(i);
+                logger.info("校验的通道为:" + qrChannel.getName());
+                //添加校验:控制二维码通道的访问速率
+                boolean b = chenckRata(qrChannel);
+                if (b){
+
+                }else {
+
+                }
+
+
+            }
+        }else {
+            throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
         }
+
+
         return qrcode;
     }
+
+
+
+    public boolean chenckRata(QRChannel qrChannel){
+        if (qrChannel != null && (qrChannel.getLastRequestTime() == null || now().after(DateUtils.addSeconds(qrChannel.getLastRequestTime(), qrChannel.getRate().intValue())))) {
+            return true;
+        }else {
+            return false;
+        }
+    }
+
+
+
+
+
 /*
     *//**
      * 订单计时器
@@ -235,4 +285,6 @@ public class QRCheckOutService3 extends BasePayService {
             }
         }, 600500);
     }*/
+
+
 }

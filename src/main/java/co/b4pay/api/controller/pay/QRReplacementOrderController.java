@@ -23,8 +23,8 @@ import javax.servlet.http.HttpServletRequest;
  * @version $Id v 0.1 2018年06月04日 21:32 Exp $
  */
 @RestController
-public class QRController extends BaseController {
-    private static final Logger logger = LoggerFactory.getLogger(QRController.class);
+public class QRReplacementOrderController extends BaseController {
+    private static final Logger logger = LoggerFactory.getLogger(QRReplacementOrderController.class);
 
     private static final String ROUTER_KEY_ALI = "qrALiPay";
     private static final String ROUTER_KEY_WX = "qrWXPay";
@@ -40,9 +40,10 @@ public class QRController extends BaseController {
     @Autowired
     private QRPayService qrPayService;
 
-    @RequestMapping(value = "/pay/qrPay.do", method = RequestMethod.POST)
-    public Object aliSPay(HttpServletRequest request) {
+    @RequestMapping(value = "/pay/qrReplacement.do", method = RequestMethod.POST)
+    public AjaxResponse aliSPay(HttpServletRequest request) {
         try {
+            logger.info("进行补单操作");
             String type = request.getParameter("type");
             Router router = null;
             switch (type) {
@@ -61,40 +62,8 @@ public class QRController extends BaseController {
                 default:
                     break;
             }
-            return qrPayService.executeReturn(getMerchantId(request), router, getParams(request), request);
-        } catch (BizException e) {
 
-            logger.warn(e.getMessage());
-            return AjaxResponse.failure(e.getMessage());
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-            return AjaxResponse.failure();
-        }
-
-    }
-
-    @RequestMapping(value = "/pay/qrPayExecute.do", method = RequestMethod.POST)
-    public AjaxResponse aliSPayExecute(HttpServletRequest request) {
-        try {
-            String type = request.getParameter("type");
-            Router router = null;
-            switch (type) {
-                case "0":
-                    router = routerService.findById(ROUTER_KEY_ALI);
-                    logger.info("支付宝路由校验通过:");
-                    break;
-                case "1":
-                    router = routerService.findById(ROUTER_KEY_WX);
-                    logger.info("微信路由校验通过:");
-                    break;
-                case "2":
-                    router = routerService.findById(ROUTER_KEY_JH);
-                    logger.info("聚合码路由校验通过:");
-                    break;
-                default:
-                    break;
-            }
-            JSONObject jsonObject = qrPayService.execute(getMerchantId(request), router, getParams(request), request);
+            JSONObject jsonObject = qrPayService.replacement(getMerchantId(request), router, getParams(request), request);
             return AjaxResponse.success(jsonObject);
         } catch (BizException e) {
             logger.warn(e.getMessage());
@@ -103,7 +72,9 @@ public class QRController extends BaseController {
             logger.error(e.getMessage(), e);
             return AjaxResponse.failure();
         }
+
     }
+
 
     @Override
     protected String[] getRequiredParams() {

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -46,9 +47,9 @@ public class QRCheckOutService extends BasePayService {
             }
             i = lunxun;
             QRChannel qrChannel = qrChannelList.get(i);
-            logger.info("校验的通道为:" + qrChannel.getName());
-            //添加校验:控制二维码通道的访问速率
             if (qrChannel != null && (qrChannel.getLastRequestTime() == null || now().after(DateUtils.addSeconds(qrChannel.getLastRequestTime(), qrChannel.getRate().intValue())))) {
+                logger.info("校验的通道为:" + qrChannel.getName());
+                //添加校验:控制二维码通道的访问速率
                 //得到二维码通道的充值金额
                 BigDecimal rechargeAmount = qrChannel.getRechargeAmount();
                 //得到二维码通道的冻结资金额
@@ -64,13 +65,12 @@ public class QRCheckOutService extends BasePayService {
                     //得到校验成功的二维码通道的商户id
                     Long qrMerchantId = qrChannel.getMerchantId();
                     //得到对应商户id,支付类型,金额,状态为开始的支付二维码集合
-                    List<qrcode> qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, totalMOney);
+                    List<qrcode> qrcodeList = qrCodeDao.findByChannelIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, totalMOney);
                     logger.info("得到" + qrChannel.getName() + "符合条件的二维码有" + qrcodeList.size() + "个");
                     //创富金行的商户ID为
-                    Long[] cf ={100000000000068L,100000000000093L};
-                    if (qrcodeList.size() == 0 && !cf[0].equals(merchantId) && !cf[1].equals(merchantId)) {
+                    if (qrcodeList.size() == 0) {
                         logger.info("调用任意额度码");
-                        qrcodeList = qrCodeDao.findBymerchantIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, new BigDecimal(0));
+                        qrcodeList = qrCodeDao.findByChannelIdAndStatusAndCodeTypeAndMoney(qrMerchantId, 1, payType, new BigDecimal(0));
                         logger.info("任意额度码有" + qrcodeList.size() + "个");
                         if (qrcodeList.size() != 0){
                             Random random = new Random();
@@ -79,8 +79,8 @@ public class QRCheckOutService extends BasePayService {
                                 j = random.nextInt(qrcodeList.size());
                                 logger.info("j----------->" + j);
                                 qrcode = qrcodeList.get(j);
-                                logger.info("校验的二维码是" + qrcode.getName());
                                 if (qrcode != null && (qrcode.getLastRequestTime() == null || now().after(DateUtils.addSeconds(qrcode.getLastRequestTime(), qrcode.getRate().intValue())))) {
+                                    logger.info("校验的二维码是" + qrcode.getName());
                                     String codeData = qrcode.getCodeData();
                                     if (codeData != null) {
                                         logger.info("校验通过的二维码是" + qrcode.getName());
@@ -116,8 +116,10 @@ public class QRCheckOutService extends BasePayService {
                                     /*throw new BizException(String.format("暂无可用通道,稍等一会再试!"));*/
                                 }
                             }
-                        }else {
+                        }else if (qrChannelList.size()>1){
                             session.setAttribute("lunxun",lunxun + 1);
+                        }else {
+                            throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
                         }
                     }else {
                         if (qrcodeList.size() != 0){
@@ -127,8 +129,8 @@ public class QRCheckOutService extends BasePayService {
                                 j = random.nextInt(qrcodeList.size());
                                 logger.info("j----------->" + j);
                                 qrcode = qrcodeList.get(j);
-                                logger.info("校验的二维码是" + qrcode.getName());
                                 if (qrcode != null && (qrcode.getLastRequestTime() == null || now().after(DateUtils.addSeconds(qrcode.getLastRequestTime(), qrcode.getRate().intValue())))) {
+                                    logger.info("校验的二维码是" + qrcode.getName());
                                     String codeData = qrcode.getCodeData();
                                     if (codeData != null) {
                                         logger.info("校验通过的二维码是" + qrcode.getName());
@@ -171,6 +173,7 @@ public class QRCheckOutService extends BasePayService {
                     }
                 } else {
                     session.setAttribute("lunxun", lunxun + 1);
+                    logger.info("通道:"+qrChannel.getName()+"资金池余额不足");
                     throw new BizException(String.format("暂无可用通道,稍等一会再试!"));
                 }
             } else {
@@ -180,59 +183,47 @@ public class QRCheckOutService extends BasePayService {
         }
         return qrcode;
     }
-/*
-    *//**
-     * 订单计时器
-     * (请求时触发此计时器,10分钟后执行把未支付的订单,把请求的金额从冻结资金池中减去,重新注入充值资金池)
-     *
-     * @param outTradeNo
-     *//*
-    public void timer1(String outTradeNo) {
-        Timer ntimer = new Timer();
-        ntimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                logger.info("计时器开始执行---------->");
-                //根据客户订单号查询订单信息
-                Trade trade = tradeDao.findByMerchantOrderNo(outTradeNo);
-                if (trade != null) {
-                    //得到订单创建时间
-                    Date createTime = trade.getCreateTime();
-                    logger.info("当前时间:" + format.format(new Date()));
-                    logger.info("订单创建时间:" + createTime);
-                    //得到订单状态
-                    Integer tradeState = trade.getTradeState();
-                    //如果订单为未支付,且当前时间>订单创建时间+10分钟
-                    if (tradeState < 1 && now().after(DateUtils.addSeconds(createTime, 600))) {
-                        //客户请求的金额
-                        BigDecimal totalAmount = trade.getTotalAmount();
-                        //获得商城id
-                        Long qrchannelId = trade.getQrchannelId();
-                        //获得商城地址记录
-                        QRChannel qrChannel = qrChannelDao.getOne(qrchannelId);
-                        //获得商城名称
-                        String qrChannelName = qrChannel.getName();
-                        //获得冻结资金池
-                        BigDecimal frozenCapitalPool = qrChannel.getFrozenCapitalPool();
-                        logger.info("二维码通道:[" + qrChannelName + "]当前的冻结资金池为:" + frozenCapitalPool);
-                        //获得充值金额
-                        BigDecimal rechargeAmount = qrChannel.getRechargeAmount();
-                        logger.info("二维码通道:[" + qrChannelName + "]当前的已充值资金池为:" + rechargeAmount);
-                        //从冻结资金池减去请求金额
-                        BigDecimal subtract = frozenCapitalPool.subtract(totalAmount);
-                        //从资金池中加上请求金额
-                        BigDecimal add = rechargeAmount.add(totalAmount);
-                        //保存冻结资金池
-                        qrChannel.setFrozenCapitalPool(subtract);
-                        //保存资金池
-                        qrChannel.setRechargeAmount(add);
-                        qrChannelDao.save(qrChannel);
-                        logger.info("请求金额:--[" + totalAmount + "]--已从冻结资金池减去,目前还剩[" + subtract + "]");
-                        logger.info("请求金额:--[" + totalAmount + "]--已重新加进充值资金池,目前充值资金池为[" + add + "]");
-                        ntimer.cancel();
-                    }
-                }
+
+    /**
+     * 检查二维码
+     */
+    public synchronized qrcode getQrcode(String channelId,int codeType ,BigDecimal totalAmount){
+        logger.info("----------进入通道内二维码轮询---------");
+        long channelLongId = Long.parseLong(channelId);
+        List<qrcode> qrcodeList = qrCodeDao.findByChannelIdAndStatusAndCodeTypeAndMoney(channelLongId, 1, codeType, totalAmount);
+        qrcode qrcode=null;
+        if (qrcodeList.size()==0){
+            logger.info("-------------调用通道活码------------");
+            List<qrcode> qrcodes = qrCodeDao.findByChannelIdAndStatusAndCodeTypeAndMoney(channelLongId, 1, codeType, new BigDecimal(0));
+            if (qrcodes != null){
+                 qrcode= lunXun(qrcodes);
+                 return qrcode;
+            }else {
+                throw new BizException(String.format("通道内暂时没有适合的二维码,稍等一会再试!"));
             }
-        }, 600500);
-    }*/
+        }else {
+            logger.info("-------------调用通道固码------------");
+            qrcode = lunXun(qrcodeList);
+            return qrcode;
+        }
+
+    }
+
+    public qrcode lunXun(List<qrcode> qrcodeList){
+        logger.info("++++++二维码轮询开始:-------->");
+        Iterator<qrcode> iterator = qrcodeList.iterator();
+        qrcode qrcode=null;
+        while (iterator.hasNext()){
+            qrcode next = iterator.next();
+            if (now().after(DateUtils.addSeconds(next.getLastRequestTime(),next.getRate().intValue()))){
+                qrcode=next;
+                logger.info("++++++轮询到的二维码是:"+qrcode.getName());
+                break;
+            }
+        }
+        if (qrcode == null){
+            throw new BizException(String.format("该通道内暂时没有适合的二维码,稍等一会再试!"));
+        }
+        return qrcode;
+    }
 }

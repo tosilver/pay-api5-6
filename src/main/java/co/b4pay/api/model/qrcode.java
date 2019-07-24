@@ -19,7 +19,7 @@ public class qrcode extends BaseEntity {
 
     @Id
     private Long id;
-    private Long merchantId;          //所属商户id
+    private Long channelId;          //所属通道id
     private String Name;                   //二维码名称
     private BigDecimal money;               //二维码金额
     private String codePath;                //二维码存放地址
@@ -29,15 +29,15 @@ public class qrcode extends BaseEntity {
     private Date  lastRequestTime;           //最后请求时间
     private BigDecimal turnover;            //日收入
     private BigDecimal rate;                     //速率
-    private int no;//二维码记录
+    private int no;                       //二维码调用记录
 
 
-    public Long getMerchantId() {
-        return merchantId;
+    public Long getChannelId() {
+        return channelId;
     }
 
-    public void setMerchantId(Long merchantId) {
-        this.merchantId = merchantId;
+    public void setChannelId(Long channelId) {
+        this.channelId = channelId;
     }
 
     public String getName() {

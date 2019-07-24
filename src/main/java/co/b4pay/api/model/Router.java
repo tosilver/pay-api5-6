@@ -2,6 +2,7 @@ package co.b4pay.api.model;
 
 
 import co.b4pay.api.model.base.BaseEntity;
+import org.hibernate.annotations.Proxy;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -15,6 +16,7 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "dst_router")
+@Proxy(lazy = false)
 public class Router extends BaseEntity {
     private static final long serialVersionUID = -3050115515392663096L;
 
@@ -47,5 +49,15 @@ public class Router extends BaseEntity {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+
+    @Override
+    public String toString() {
+        return "Router{" +
+                "id='" + id + '\'' +
+                ", version='" + version + '\'' +
+                ", status=" + status +
+                '}';
     }
 }

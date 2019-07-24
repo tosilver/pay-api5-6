@@ -1,6 +1,7 @@
 package co.b4pay.api.model;
 
 import co.b4pay.api.model.base.BaseEntity;
+import org.hibernate.annotations.Proxy;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.util.Date;
  */
 @Entity
 @Table(name = "dst_channel")
+@Proxy(lazy = false)
 public class Channel extends BaseEntity {
     /**
      * serialVersionUID
@@ -45,8 +47,8 @@ public class Channel extends BaseEntity {
     private String ip4;                                         //ip4地址
     private Date lastFailTime;                                 //最后交易失败时间
     private Integer product;                                     //产品
-    private BigDecimal amountMin;//最低额度
-    private BigDecimal rate;//单笔成单速率
+    private BigDecimal amountMin;                               //最低额度
+    private BigDecimal rate;                                        //单笔成单速率
     private Float fzPercentage;                                    //支付宝分账百分比
     private Date lastSuccessTime;                                 //最后交易成功时间
     @ManyToOne
@@ -260,5 +262,38 @@ public class Channel extends BaseEntity {
 
     public void setLastSuccessTime(Date lastSuccessTime) {
         this.lastSuccessTime = lastSuccessTime;
+    }
+
+
+    @Override
+    public String toString() {
+        return "Channel{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", amountInit=" + amountInit +
+                ", amountLimit=" + amountLimit +
+                ", resetTime=" + resetTime +
+                ", testAppid='" + testAppid + '\'' +
+                ", testPid='" + testPid + '\'' +
+                ", prodPid='" + prodPid + '\'' +
+                ", testPrivateKey='" + testPrivateKey + '\'' +
+                ", prodPrivateKey='" + prodPrivateKey + '\'' +
+                ", testPublicKey='" + testPublicKey + '\'' +
+                ", prodPublicKey='" + prodPublicKey + '\'' +
+                ", prodAppid='" + prodAppid + '\'' +
+                ", status=" + status +
+                ", unitPrice=" + unitPrice +
+                ", updateTime=" + updateTime +
+                ", minPrice=" + minPrice +
+                ", goodsTypeId='" + goodsTypeId + '\'' +
+                ", ip4='" + ip4 + '\'' +
+                ", lastFailTime=" + lastFailTime +
+                ", product=" + product +
+                ", amountMin=" + amountMin +
+                ", rate=" + rate +
+                ", fzPercentage=" + fzPercentage +
+                ", lastSuccessTime=" + lastSuccessTime +
+                ", router=" + router +
+                '}';
     }
 }
