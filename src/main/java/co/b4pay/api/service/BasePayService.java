@@ -138,6 +138,7 @@ public class BasePayService {
             if (_channel.getAmountLimit().compareTo(totalAmount.add(_channel.getAmountMin() == null ? BigDecimal.ZERO : _channel.getAmountMin())) > 0
                     && (_channel.getLastSuccessTime() == null || now().after(DateUtils.addSeconds(_channel.getLastSuccessTime(), _channel.getRate().intValue())))) {
                 _channel.setUpdateTime(now());
+                _channel.setLastSuccessTime(now());
                 channelDao.save(_channel);
                 channel = _channel;
                 logger.info("轮询通过的通道为:"+channel.getName());

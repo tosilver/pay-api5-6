@@ -217,6 +217,8 @@ public class QRCheckOutService extends BasePayService {
             qrcode next = iterator.next();
             if (now().after(DateUtils.addSeconds(next.getLastRequestTime(),next.getRate().intValue()))){
                 qrcode=next;
+                next.setLastRequestTime(now());
+                qrCodeDao.save(next);
                 logger.info("++++++轮询到的二维码是:"+qrcode.getName());
                 break;
             }
